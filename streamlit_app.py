@@ -16,7 +16,7 @@ ANGLE_MAP = {
 }
 
 
-def plot_unit_circle(ax, angle_rad):
+def plot_unit_circle(ax, angle_rad, highlight_color='red'):
     # Base circle
     theta = np.linspace(0, 2 * np.pi, 400)
     x = np.cos(theta)
@@ -43,13 +43,13 @@ def plot_unit_circle(ax, angle_rad):
 
     eps = 1e-9
     if abs(angle_rad) < eps:
-        ax.plot(1.0, 0.0, marker='o', color='red', markersize=8)
+        ax.plot(1.0, 0.0, marker='o', color=highlight_color, markersize=8)
     else:
         theta_red = np.linspace(0, angle_rad, max(2, int(200 * angle_rad / (2 * np.pi))))
         x_red = np.cos(theta_red)
         y_red = np.sin(theta_red)
-        ax.plot(x_red, y_red, color='red', linewidth=3)
-        ax.plot(x_p, y_p, marker='o', color='red', markersize=8)
+        ax.plot(x_red, y_red, color=highlight_color, linewidth=3)
+        ax.plot(x_p, y_p, marker='o', color=highlight_color, markersize=8)
 
     # Dashed projection lines to axes
     ax.plot([x_p, x_p], [0, y_p], color='gray', linestyle='--', linewidth=1)
@@ -65,7 +65,7 @@ def plot_unit_circle(ax, angle_rad):
     ax.text(x_p + 0.05 * np.sign(x_p if abs(x_p) > 1e-6 else 1), y_p + 0.05, coord_text, color='black')
 
 
-def plot_sine(ax, angle_rad):
+def plot_sine(ax, angle_rad, highlight_color='red'):
     x = np.linspace(0, 2 * np.pi, 600)
     y = np.sin(x)
     ax.plot(x, y, color='k', linewidth=1)
@@ -87,38 +87,82 @@ def plot_sine(ax, angle_rad):
     # Highlight part and point
     eps = 1e-9
     if abs(angle_rad) < eps:
-        ax.plot(0.0, 0.0, marker='o', color='red', markersize=8)
+        ax.plot(0.0, 0.0, marker='o', color=highlight_color, markersize=8)
     else:
         mask = x <= angle_rad + 1e-12
         x_red = x[mask]
         y_red = y[mask]
-        ax.plot(x_red, y_red, color='red', linewidth=3)
-        ax.plot(angle_rad, np.sin(angle_rad), marker='o', color='red', markersize=8)
+        ax.plot(x_red, y_red, color=highlight_color, linewidth=3)
+        ax.plot(angle_rad, np.sin(angle_rad), marker='o', color=highlight_color, markersize=8)
 
     # Dashed projection lines: vertical to x-axis and horizontal to y-axis
     ax.plot([angle_rad, angle_rad], [0, np.sin(angle_rad)], color='gray', linestyle='--', linewidth=1)
     ax.plot([0, angle_rad], [np.sin(angle_rad), np.sin(angle_rad)], color='gray', linestyle='--', linewidth=1)
 
+def plot_cosine(ax, angle_rad, highlight_color='blue'):
+    x = np.linspace(0, 2 * np.pi, 600)
+    y = np.cos(x)
+    ax.plot(x, y, color='k', linewidth=1)
+
+    # Axes
+    ax.axhline(0, color='k', linewidth=1)
+    ax.axvline(0, color='k', linewidth=1)
+
+    # Limits and ticks
+    ax.set_xlim(0, 2 * np.pi)
+    ax.set_ylim(-1.2, 1.2)
+    xticks = [0, np.pi / 2, np.pi, 3 * np.pi / 2, 2 * np.pi]
+    xtick_labels = ['0', 'π/2', 'π', '3π/2', '2π']
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xtick_labels)
+    ax.set_yticks([-1, 0, 1])
+    ax.grid(True, linestyle='--', linewidth=0.5)
+
+    # Highlight part and point
+    eps = 1e-9
+    if abs(angle_rad) < eps:
+        ax.plot(0.0, 1.0, marker='o', color=highlight_color, markersize=8)
+    else:
+        mask = x <= angle_rad + 1e-12
+        x_red = x[mask]
+        y_red = y[mask]
+        ax.plot(x_red, y_red, color=highlight_color, linewidth=3)
+        ax.plot(angle_rad, np.cos(angle_rad), marker='o', color=highlight_color, markersize=8)
+
+    # Dashed projection lines: vertical to x-axis and horizontal to y-axis
+    ax.plot([angle_rad, angle_rad], [0, np.cos(angle_rad)], color='gray', linestyle='--', linewidth=1)
+    ax.plot([0, angle_rad], [np.cos(angle_rad), np.cos(angle_rad)], color='gray', linestyle='--', linewidth=1)
+
 
 def main():
-    st.title('단위원과 사인함수')
+    st.title('단위원과 삼각함수')
 
     sel = st.selectbox('각도를 선택하세요', ANGLE_OPTIONS, index=0)
     angle = ANGLE_MAP[sel]
 
-    col1, col2 = st.columns([1, 1])
-
-    # Left: unit circle
-    with col1:
+    st.markdown('### sin 함수')
+    top_col1, top_col2 = st.columns([1, 1])
+    with top_col1:
         fig1, ax1 = plt.subplots(figsize=(4, 4))
-        plot_unit_circle(ax1, angle)
+        plot_unit_circle(ax1, angle, highlight_color='red')
         st.pyplot(fig1)
 
-    # Right: sine
-    with col2:
+    with top_col2:
         fig2, ax2 = plt.subplots(figsize=(6, 4))
-        plot_sine(ax2, angle)
+        plot_sine(ax2, angle, highlight_color='red')
         st.pyplot(fig2)
+
+    st.markdown('### cos 함수')
+    bot_col1, bot_col2 = st.columns([1, 1])
+    with bot_col1:
+        fig3, ax3 = plt.subplots(figsize=(4, 4))
+        plot_unit_circle(ax3, angle, highlight_color='blue')
+        st.pyplot(fig3)
+
+    with bot_col2:
+        fig4, ax4 = plt.subplots(figsize=(6, 4))
+        plot_cosine(ax4, angle, highlight_color='blue')
+        st.pyplot(fig4)
 
     # Values table under the plots
     sin_val = np.sin(angle)
@@ -136,4 +180,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    

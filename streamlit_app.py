@@ -34,118 +34,141 @@ def get_gdp_data():
     # - [Stuff I don't care about]
     # - GDP for 1960
     # - GDP for 1961
-    # - GDP for 1962
-    # - ...
-    # - GDP for 2022
-    #
-    # ...but I want this instead:
-    # - Country Name
-    # - Country Code
-    # - Year
-    # - GDP
-    #
-    # So let's pivot all those year-columns into two: Year and GDP
-    gdp_df = raw_gdp_df.melt(
-        ['Country Code'],
-        [str(x) for x in range(MIN_YEAR, MAX_YEAR + 1)],
-        'Year',
-        'GDP',
-    )
-
-    # Convert years from string to integers
-    gdp_df['Year'] = pd.to_numeric(gdp_df['Year'])
-
-    return gdp_df
-
-gdp_df = get_gdp_data()
-
-# -----------------------------------------------------------------------------
-# Draw the actual page
-
-# Set the title that appears at the top of the page.
-'''
-# :earth_americas: GDP dashboard
-
-Browse GDP data from the [World Bank Open Data](https://data.worldbank.org/) website. As you'll
-notice, the data only goes to 2022 right now, and datapoints for certain years are often missing.
-But it's otherwise a great (and did I mention _free_?) source of data.
-'''
-
-# Add some spacing
-''
-''
-
-min_value = gdp_df['Year'].min()
-max_value = gdp_df['Year'].max()
-
-from_year, to_year = st.slider(
-    'Which years are you interested in?',
-    min_value=min_value,
-    max_value=max_value,
-    value=[min_value, max_value])
-
-countries = gdp_df['Country Code'].unique()
-
-if not len(countries):
-    st.warning("Select at least one country")
-
-selected_countries = st.multiselect(
-    'Which countries would you like to view?',
-    countries,
-    ['DEU', 'FRA', 'GBR', 'BRA', 'MEX', 'JPN'])
-
-''
-''
-''
-
-# Filter the data
-filtered_gdp_df = gdp_df[
-    (gdp_df['Country Code'].isin(selected_countries))
-    & (gdp_df['Year'] <= to_year)
-    & (from_year <= gdp_df['Year'])
-]
-
-st.header('GDP over time', divider='gray')
-
-''
-
-st.line_chart(
-    filtered_gdp_df,
-    x='Year',
-    y='GDP',
-    color='Country Code',
-)
-
-''
-''
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import streamlit as st
+    import pandas as pd
 
 
-first_year = gdp_df[gdp_df['Year'] == from_year]
-last_year = gdp_df[gdp_df['Year'] == to_year]
+    st.set_page_config(page_title='단위원과 사인함수', layout='wide')
 
-st.header(f'GDP in {to_year}', divider='gray')
+    ANGLE_OPTIONS = ['0', 'π/2', 'π', '3π/2', '2π']
+    ANGLE_MAP = {
+        '0': 0.0,
+        'π/2': np.pi / 2,
+        'π': np.pi,
+        '3π/2': 3 * np.pi / 2,
+        '2π': 2 * np.pi,
+    }
 
-''
 
-cols = st.columns(4)
+    def plot_unit_circle(ax, angle_rad):
+        # Base circle
+        theta = np.linspace(0, 2 * np.pi, 400)
+        x = np.cos(theta)
+        y = np.sin(theta)
+        ax.plot(x, y, color='k', linewidth=1)
 
-for i, country in enumerate(selected_countries):
-    col = cols[i % len(cols)]
+        # Axes
+        ax.axhline(0, color='k', linewidth=1)
+        ax.axvline(0, color='k', linewidth=1)
 
-    with col:
-        first_gdp = first_year[first_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-        last_gdp = last_year[last_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
+        # Limits and aspect
+        ax.set_xlim(-1.2, 1.2)
+        ax.set_ylim(-1.2, 1.2)
+        ax.set_aspect('equal', adjustable='box')
 
-        if math.isnan(first_gdp):
-            growth = 'n/a'
-            delta_color = 'off'
+        # Grid and ticks
+        ax.grid(True, linestyle='--', linewidth=0.5)
+        ax.set_xticks(np.linspace(-1, 1, 5))
+        ax.set_yticks(np.linspace(-1, 1, 5))
+
+        # Selected point
+        x_p = np.cos(angle_rad)
+        y_p = np.sin(angle_rad)
+
+        eps = 1e-9
+        if abs(angle_rad) < eps:
+            ax.plot(1.0, 0.0, marker='o', color='red', markersize=8)
         else:
-            growth = f'{last_gdp / first_gdp:,.2f}x'
-            delta_color = 'normal'
+            theta_red = np.linspace(0, angle_rad, max(2, int(200 * angle_rad / (2 * np.pi))))
+            x_red = np.cos(theta_red)
+            y_red = np.sin(theta_red)
+            ax.plot(x_red, y_red, color='red', linewidth=3)
+            ax.plot(x_p, y_p, marker='o', color='red', markersize=8)
 
-        st.metric(
-            label=f'{country} GDP',
-            value=f'{last_gdp:,.0f}B',
-            delta=growth,
-            delta_color=delta_color
-        )
+        # Dashed projection lines to axes
+        ax.plot([x_p, x_p], [0, y_p], color='gray', linestyle='--', linewidth=1)
+        ax.plot([0, x_p], [y_p, y_p], color='gray', linestyle='--', linewidth=1)
+
+        # θ label near the small arc
+        mid_theta = angle_rad / 2 if angle_rad > 0 else 0.1
+        label_r = 0.28
+        ax.text(label_r * np.cos(mid_theta), label_r * np.sin(mid_theta), 'θ', color='black', fontsize=14)
+
+        # Coordinate label
+        coord_text = f'({x_p:.3f}, {y_p:.3f})'
+        ax.text(x_p + 0.05 * np.sign(x_p if abs(x_p) > 1e-6 else 1), y_p + 0.05, coord_text, color='black')
+
+
+    def plot_sine(ax, angle_rad):
+        x = np.linspace(0, 2 * np.pi, 600)
+        y = np.sin(x)
+        ax.plot(x, y, color='k', linewidth=1)
+
+        # Axes
+        ax.axhline(0, color='k', linewidth=1)
+        ax.axvline(0, color='k', linewidth=1)
+
+        # Limits and ticks
+        ax.set_xlim(0, 2 * np.pi)
+        ax.set_ylim(-1.2, 1.2)
+        xticks = [0, np.pi / 2, np.pi, 3 * np.pi / 2, 2 * np.pi]
+        xtick_labels = ['0', 'π/2', 'π', '3π/2', '2π']
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xtick_labels)
+        ax.set_yticks([-1, 0, 1])
+        ax.grid(True, linestyle='--', linewidth=0.5)
+
+        # Highlight part and point
+        eps = 1e-9
+        if abs(angle_rad) < eps:
+            ax.plot(0.0, 0.0, marker='o', color='red', markersize=8)
+        else:
+            mask = x <= angle_rad + 1e-12
+            x_red = x[mask]
+            y_red = y[mask]
+            ax.plot(x_red, y_red, color='red', linewidth=3)
+            ax.plot(angle_rad, np.sin(angle_rad), marker='o', color='red', markersize=8)
+
+        # Dashed projection lines: vertical to x-axis and horizontal to y-axis
+        ax.plot([angle_rad, angle_rad], [0, np.sin(angle_rad)], color='gray', linestyle='--', linewidth=1)
+        ax.plot([0, angle_rad], [np.sin(angle_rad), np.sin(angle_rad)], color='gray', linestyle='--', linewidth=1)
+
+
+    def main():
+        st.title('단위원과 사인함수')
+
+        sel = st.selectbox('각도를 선택하세요', ANGLE_OPTIONS, index=0)
+        angle = ANGLE_MAP[sel]
+
+        col1, col2 = st.columns([1, 1])
+
+        # Left: unit circle
+        with col1:
+            fig1, ax1 = plt.subplots(figsize=(4, 4))
+            plot_unit_circle(ax1, angle)
+            st.pyplot(fig1)
+
+        # Right: sine
+        with col2:
+            fig2, ax2 = plt.subplots(figsize=(6, 4))
+            plot_sine(ax2, angle)
+            st.pyplot(fig2)
+
+        # Values table under the plots
+        sin_val = np.sin(angle)
+        cos_val = np.cos(angle)
+        radians = angle
+
+        df = pd.DataFrame({
+            '항목': ['각도', '라디안', 'sin', 'cos'],
+            '값': [sel, f'{radians:.6f}', f'{sin_val:.6f}', f'{cos_val:.6f}']
+        })
+
+        st.markdown('**선택된 값**')
+        st.table(df)
+
+
+    if __name__ == '__main__':
+        main()
